@@ -8,7 +8,6 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     body { background-color: #f8f9fa; color: #111; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
     
-    /* Enlarged App Container */
     .app-container { 
       background: #ffffff; 
       width: 100%; 
@@ -47,7 +46,6 @@
     /* Unsolved Grid */
     .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
     
-    /* Enlarged Word Cards with Clean Text Wrapping */
     .card { 
       background-color: #eef0f3; 
       border-radius: 12px; 
@@ -67,7 +65,6 @@
       overflow-wrap: break-word;
       text-align: center;
       line-height: 1.3;
-      hyphens: manual;
     }
     .card:hover { background-color: #e2e5e9; }
     .card.selected { background-color: #5a595e; color: #ffffff; }
@@ -230,26 +227,28 @@
   <script>
     const SHEET_ID = '2PACX-1vRO4mJOvOpCVZXcRKSnBlrjC8Fih94BMFuPj5VxQme0nt39x-DzfQGpWFIDhzaXeTEkfYHOZlw0ojmL';
     
-    const PRIMARY_CSV_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?gid=0&single=true&output=csv`;
-    const PROXY_CSV_URL = `https://api.allorigins.win/raw?url=${encodeURIComponent(PRIMARY_CSV_URL)}`;
+    // Multiple URLs to bypass Google Sheet CORS and caching restrictions
+    const GVIZ_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/gviz/tq?tqx=out:csv`;
+    const PUB_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?gid=0&single=true&output=csv`;
+    const PROXY_URL = `https://api.allorigins.win/raw?url=${encodeURIComponent(PUB_URL)}`;
 
     const FALLBACK_BANK = [
-      { word: "NUMBER", clue: "A mathematical object used to count, measure, and label amounts.", gradeNum: 0 },
-      { word: "COUNT", clue: "To recite numbers in sequence to find the total quantity of items in a set.", gradeNum: 0 },
-      { word: "ZERO", clue: "The numerical digit representing the absence of quantity.", gradeNum: 0 },
-      { word: "EQUAL", clue: "Having the exact same value, quantity, or amount.", gradeNum: 0 },
-      { word: "DIGIT", clue: "Any of the single numerals from 0 to 9 used to form numbers.", gradeNum: 1 },
-      { word: "NUMERAL", clue: "A written symbol or group of symbols representing a number.", gradeNum: 1 },
-      { word: "ONES", clue: "The single-digit place value representing units from 0 to 9.", gradeNum: 1 },
-      { word: "TENS", clue: "The place value representing groups of ten ones.", gradeNum: 1 },
-      { word: "SUM", clue: "The result obtained by adding two or more numbers together.", gradeNum: 2 },
-      { word: "TOTAL", clue: "The complete sum or amount obtained by combining all parts.", gradeNum: 2 },
-      { word: "ADDITION", clue: "The mathematical operation of combining two or more quantities.", gradeNum: 2 },
-      { word: "SUBTRACTION", clue: "The mathematical operation of finding the difference between quantities.", gradeNum: 2 },
-      { word: "FRACTION", clue: "A numerical quantity that is not a whole number.", gradeNum: 4 },
-      { word: "DECIMAL", clue: "A fraction whose denominator is a power of ten.", gradeNum: 5 },
-      { word: "PERCENT", clue: "A ratio comparing a number to one hundred.", gradeNum: 6 },
-      { word: "RATIO", clue: "A quantitative relationship between two amounts.", gradeNum: 6 }
+      { word: "NUMBER", clue: "A mathematical object used to count, measure, and label amounts.", subject: "Numbers & Counting" },
+      { word: "COUNT", clue: "To recite numbers in sequence to find the total quantity of items in a set.", subject: "Numbers & Counting" },
+      { word: "ZERO", clue: "The numerical digit representing the absence of quantity.", subject: "Numbers & Counting" },
+      { word: "NUMERAL", clue: "A written symbol or group of symbols representing a number.", subject: "Numbers & Counting" },
+      { word: "ONES", clue: "The single-digit place value representing units from 0 to 9.", subject: "Place Value" },
+      { word: "TENS", clue: "The place value representing groups of ten ones.", subject: "Place Value" },
+      { word: "DIGIT", clue: "Any of the single numerals from 0 to 9 used to form numbers.", subject: "Place Value" },
+      { word: "EQUAL", clue: "Having the exact same value, quantity, or amount.", subject: "Place Value" },
+      { word: "SUM", clue: "The result obtained by adding two or more numbers together.", subject: "Basic Operations" },
+      { word: "TOTAL", clue: "The complete sum or amount obtained by combining all parts.", subject: "Basic Operations" },
+      { word: "ADDITION", clue: "The mathematical operation of combining two or more quantities.", subject: "Basic Operations" },
+      { word: "SUBTRACTION", clue: "The mathematical operation of finding the difference between quantities.", subject: "Basic Operations" },
+      { word: "FRACTION", clue: "A numerical quantity that is not a whole number.", subject: "Advanced Topics" },
+      { word: "DECIMAL", clue: "A fraction whose denominator is a power of ten.", subject: "Advanced Topics" },
+      { word: "PERCENT", clue: "A ratio comparing a number to one hundred.", subject: "Advanced Topics" },
+      { word: "RATIO", clue: "A quantitative relationship between two amounts.", subject: "Advanced Topics" }
     ];
 
     let globalLoadedBank = [];
@@ -293,63 +292,39 @@
       return result;
     }
 
-    function parseGrade(rawGrade) {
-      if (!rawGrade) return 0;
-      const str = rawGrade.toString().toLowerCase();
-      if (str.includes('k')) return 0;
-      if (str.includes('high') || str.includes('hs')) return 12;
-      const match = str.match(/\d+/);
-      return match ? parseInt(match[0], 10) : 0;
-    }
-
-    async function fetchWithTimeout(resource, timeoutMs = 2500) {
+    async function tryFetchCSV(url, timeoutMs = 2000) {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const id = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        const response = await fetch(resource, { signal: controller.signal });
-        clearTimeout(timer);
-        return response;
-      } catch (err) {
-        clearTimeout(timer);
-        return null;
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(id);
+        if (response.ok) {
+          const txt = await response.text();
+          if (txt && !txt.trim().startsWith("<!DOCTYPE") && !txt.trim().startsWith("<html")) {
+            return txt;
+          }
+        }
+      } catch (e) {
+        clearTimeout(id);
       }
+      return null;
     }
 
     async function loadWordBank() {
-      let text = null;
-
-      try {
-        const directRes = await fetchWithTimeout(`${PRIMARY_CSV_URL}&_t=${Date.now()}`, 2500);
-        if (directRes && directRes.ok) {
-          const raw = await directRes.text();
-          if (raw && !raw.trim().startsWith("<!DOCTYPE") && !raw.trim().startsWith("<html")) {
-            text = raw;
-          }
-        }
-      } catch (e) {}
-
-      if (!text) {
-        try {
-          const proxyRes = await fetchWithTimeout(PROXY_CSV_URL, 2500);
-          if (proxyRes && proxyRes.ok) {
-            const raw = await proxyRes.text();
-            if (raw && !raw.trim().startsWith("<!DOCTYPE") && !raw.trim().startsWith("<html")) {
-              text = raw;
-            }
-          }
-        } catch (e) {}
-      }
+      let csvText = await tryFetchCSV(GVIZ_URL, 2000);
+      if (!csvText) csvText = await tryFetchCSV(`${PUB_URL}&_t=${Date.now()}`, 2000);
+      if (!csvText) csvText = await tryFetchCSV(PROXY_URL, 2000);
 
       const bank = [];
-      if (text) {
-        const lines = text.split(/\r?\n/);
+      if (csvText) {
+        const lines = csvText.split(/\r?\n/);
         for (let i = 1; i < lines.length; i++) {
           const parts = parseCSVLine(lines[i]);
-          if (parts.length >= 2 && parts[0]) {
+          if (parts.length >= 4 && parts[0]) {
             const word = parts[0].replace(/[^a-zA-Z0-9\s-]/g, '').trim().toUpperCase();
             const clue = parts[1] ? parts[1].replace(/\$/g, '').trim() : 'No definition available.';
-            const gradeNum = parseGrade(parts[2] || '');
-            if (word) bank.push({ word, clue, gradeNum });
+            const subject = parts[3] ? parts[3].trim() : 'General Math';
+            if (word && subject) bank.push({ word, clue, subject });
           }
         }
       }
@@ -360,29 +335,37 @@
 
     function getCategoriesForSeed(bank, seed) {
       const rng = createSeededRandom(seed);
-      const unique = bank.filter((v, i, a) => a.findIndex(t => t.word === v.word) === i);
-      unique.sort((a, b) => a.gradeNum - b.gradeNum);
 
-      const count = Math.floor(unique.length / 4);
+      const subjectMap = {};
+      bank.forEach(item => {
+        if (!subjectMap[item.subject]) subjectMap[item.subject] = [];
+        if (!subjectMap[item.subject].some(w => w.word === item.word)) {
+          subjectMap[item.subject].push(item);
+        }
+      });
 
-      const pickFourForToday = (pool) => {
-        const shuffled = [...pool].map(item => ({ item, sortKey: rng() }))
-                                  .sort((a, b) => a.sortKey - b.sortKey)
-                                  .map(entry => entry.item);
-        return shuffled.slice(0, 4);
-      };
+      const validSubjects = Object.keys(subjectMap).filter(subj => subjectMap[subj].length >= 4);
 
-      const g1 = pickFourForToday(unique.slice(0, count));
-      const g2 = pickFourForToday(unique.slice(count, count * 2));
-      const g3 = pickFourForToday(unique.slice(count * 2, count * 3));
-      const g4 = pickFourForToday(unique.slice(count * 3, count * 4));
+      const shuffledSubjects = [...validSubjects].map(subj => ({ subj, sortKey: rng() }))
+                                                .sort((a, b) => a.sortKey - b.sortKey)
+                                                .map(entry => entry.subj)
+                                                .slice(0, 4);
 
-      return [
-        { name: "Early Primary Foundations (Grades K-1)", class: "cat-easy", items: g1 },
-        { name: "Elementary Operations & Place Value (Grades 2-3)", class: "cat-medium", items: g2 },
-        { name: "Intermediate Math Concepts (Grades 4-5)", class: "cat-hard", items: g3 },
-        { name: "Advanced Ratios & Algebra (Grades 6+)", class: "cat-tricky", items: g4 }
-      ];
+      const colorClasses = ["cat-easy", "cat-medium", "cat-hard", "cat-tricky"];
+
+      return shuffledSubjects.map((subjName, idx) => {
+        const pool = subjectMap[subjName];
+        const shuffledWords = [...pool].map(item => ({ item, sortKey: rng() }))
+                                       .sort((a, b) => a.sortKey - b.sortKey)
+                                       .map(entry => entry.item)
+                                       .slice(0, 4);
+
+        return {
+          name: subjName,
+          class: colorClasses[idx % 4],
+          items: shuffledWords
+        };
+      });
     }
 
     function buildGameCategories(bank) {
@@ -412,10 +395,9 @@
         const div = document.createElement('div');
         div.className = `solved-category ${cat.class}`;
         const wordList = cat.items.map(i => i.word).join(', ');
-        const cleanName = cat.name.replace(/\s*\([^)]*\)/g, '');
 
         div.innerHTML = `
-          <div class="cat-title">${cleanName}</div>
+          <div class="cat-title">${cat.name}</div>
           <div class="cat-words">${wordList}</div>
         `;
         container.appendChild(div);
