@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Daily Math Connections</title>
+  <title>Daily Math Links</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     body { background-color: #f8f9fa; color: #111; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
@@ -153,7 +153,7 @@
       <div class="header-actions-left">
         <button class="btn-yesterday" id="yesterday-btn" title="View Yesterday's Answers">⏮️ Yesterday</button>
       </div>
-      <h1>Math Connections</h1>
+      <h1>Math Links</h1>
       <p class="subtitle">Create four groups of four related math terms!</p>
       <div class="header-actions-right">
         <button class="icon-btn" id="help-btn" title="How to Play">?</button>
@@ -346,7 +346,6 @@
         for (let i = 1; i < lines.length; i++) {
           const parts = parseCSVLine(lines[i]);
           if (parts.length >= 2 && parts[0]) {
-            // Keep spaces between multi-word terms (only strip special symbols)
             const word = parts[0].replace(/[^a-zA-Z0-9\s-]/g, '').trim().toUpperCase();
             const clue = parts[1] ? parts[1].replace(/\$/g, '').trim() : 'No definition available.';
             const gradeNum = parseGrade(parts[2] || '');
