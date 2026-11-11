@@ -1,1 +1,554 @@
-# Math-Links
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Daily Math Connections</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: #f8f9fa; color: #111; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 16px; }
+    .app-container { background: #ffffff; width: 100%; max-width: 650px; padding: 28px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); text-align: center; position: relative; }
+    
+    .header { margin-bottom: 20px; position: relative; }
+    .header h1 { font-size: 32px; font-weight: 800; letter-spacing: 1px; }
+    .subtitle { font-size: 15px; color: #555; margin-top: 4px; }
+
+    .header-actions-left { position: absolute; left: 0; top: 0; display: flex; gap: 8px; }
+    .header-actions-right { position: absolute; right: 0; top: 0; display: flex; gap: 8px; }
+
+    .btn-yesterday { background: #e9ecef; border: none; padding: 0 12px; height: 36px; border-radius: 18px; cursor: pointer; font-size: 13px; font-weight: 600; color: #333; display: flex; align-items: center; gap: 4px; transition: background 0.2s; }
+    .btn-yesterday:hover { background: #dee2e6; }
+    .icon-btn { background: #e9ecef; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; transition: background 0.2s; }
+    .icon-btn:hover { background: #dee2e6; }
+
+    .game-board { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    
+    /* Solved Categories */
+    .solved-category { border-radius: 8px; padding: 16px; text-align: center; color: #111; font-weight: 700; text-transform: uppercase; animation: fadeIn 0.4s ease; }
+    .solved-category .cat-title { font-size: 16px; margin-bottom: 4px; letter-spacing: 0.5px; }
+    .solved-category .cat-words { font-size: 14px; font-weight: 500; opacity: 0.9; }
+
+    .cat-easy { background-color: #f9df6d; }      /* Yellow */
+    .cat-medium { background-color: #a0c35a; }    /* Green */
+    .cat-hard { background-color: #b0c4ef; }      /* Blue */
+    .cat-tricky { background-color: #ba81c5; color: #fff; } /* Purple */
+
+    /* Unsolved Grid */
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .card { background-color: #eef0f3; border-radius: 8px; aspect-ratio: 1.4; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; text-transform: uppercase; padding: 8px; cursor: pointer; user-select: none; transition: background 0.15s, transform 0.1s; position: relative; }
+    .card:hover { background-color: #e2e5e9; }
+    .card.selected { background-color: #5a595e; color: #ffffff; }
+
+    /* Tooltip Styling */
+    .tooltip {
+      visibility: hidden;
+      opacity: 0;
+      width: 180px;
+      background-color: #222;
+      color: #fff;
+      text-align: center;
+      border-radius: 6px;
+      padding: 8px 10px;
+      position: absolute;
+      z-index: 10;
+      bottom: 110%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      font-weight: 400;
+      text-transform: none;
+      line-height: 1.3;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      pointer-events: none;
+      transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+    }
+
+    .tooltip::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: #222 transparent transparent transparent;
+    }
+
+    .card:hover .tooltip {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    /* Attempts & Status */
+    .status-area { margin-bottom: 20px; height: 28px; font-size: 15px; font-weight: 600; color: #dc3545; }
+    .mistakes-row { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 24px; font-size: 14px; font-weight: 600; color: #555; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; background-color: #5a595e; display: inline-block; }
+    .dot.lost { background-color: #ccc; }
+
+    /* Controls */
+    .controls-row { display: flex; justify-content: center; gap: 12px; }
+    .action-btn { padding: 12px 20px; border-radius: 24px; border: 1px solid #111; background: #fff; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+    .action-btn:hover { background: #f1f3f5; }
+    .action-btn.primary { background: #111; color: #fff; border: none; }
+    .action-btn.primary:hover { background: #333; }
+    .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Modals */
+    .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); border-radius: 16px; display: none; justify-content: center; align-items: center; z-index: 20; }
+    .modal-overlay.open { display: flex; }
+    .modal-content { background: #ffffff; width: 90%; max-width: 450px; padding: 24px; border-radius: 12px; text-align: left; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .modal-title { font-size: 20px; font-weight: 700; }
+    .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #6c757d; }
+
+    .help-body { font-size: 14px; line-height: 1.5; color: #333; }
+    .help-body p { margin-bottom: 10px; }
+    .help-body ul { margin-left: 20px; margin-bottom: 12px; }
+
+    .stats-summary { display: flex; justify-content: space-between; margin-bottom: 20px; text-align: center; }
+    .stat-box { flex: 1; }
+    .stat-val { font-size: 24px; font-weight: 700; color: #111; }
+    .stat-lbl { font-size: 10px; color: #6c757d; text-transform: uppercase; font-weight: 600; margin-top: 2px; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <div class="header">
+      <div class="header-actions-left">
+        <button class="btn-yesterday" id="yesterday-btn" title="View Yesterday's Answers">⏮️ Yesterday</button>
+      </div>
+      <h1>Math Connections</h1>
+      <p class="subtitle">Create four groups of four related math terms!</p>
+      <div class="header-actions-right">
+        <button class="icon-btn" id="help-btn" title="How to Play">?</button>
+        <button class="icon-btn" id="stats-btn" title="Statistics">📊</button>
+      </div>
+    </div>
+
+    <div class="game-board" id="game-board">
+      <div id="solved-container"></div>
+      <div class="grid" id="unsolved-grid"></div>
+    </div>
+
+    <div class="status-area" id="status-msg">Loading Word Bank...</div>
+
+    <div class="mistakes-row">
+      <span>Mistakes remaining:</span>
+      <div id="mistakes-dots" style="display: flex; gap: 6px;">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      </div>
+    </div>
+
+    <div class="controls-row">
+      <button class="action-btn" id="shuffle-btn">Shuffle</button>
+      <button class="action-btn" id="deselect-btn">Deselect All</button>
+      <button class="action-btn primary" id="submit-btn" disabled>Submit</button>
+    </div>
+
+    <!-- Yesterday Modal -->
+    <div class="modal-overlay" id="yesterday-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">YESTERDAY'S ANSWERS</div>
+          <button class="close-btn" id="close-yesterday">&times;</button>
+        </div>
+        <div id="yesterday-categories-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal-overlay" id="help-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">HOW TO PLAY</div>
+          <button class="close-btn" id="close-help">&times;</button>
+        </div>
+        <div class="help-body">
+          <p>Find groups of four items that share a common mathematical connection.</p>
+          <ul>
+            <li>Select four items and tap <strong>Submit</strong> to check if your guess is correct.</li>
+            <li>Hover over any word tile to view its definition!</li>
+            <li>Find the groups without making 4 mistakes!</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div class="modal-overlay" id="stats-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">STATISTICS</div>
+          <button class="close-btn" id="close-stats">&times;</button>
+        </div>
+        <div class="stats-summary">
+          <div class="stat-box"><div class="stat-val" id="stat-played">0</div><div class="stat-lbl">Played</div></div>
+          <div class="stat-box"><div class="stat-val" id="stat-winrate">0%</div><div class="stat-lbl">Win %</div></div>
+          <div class="stat-box"><div class="stat-val" id="stat-streak">0</div><div class="stat-lbl">Current Streak</div></div>
+          <div class="stat-box"><div class="stat-val" id="stat-maxstreak">0</div><div class="stat-lbl">Max Streak</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SHEET_ID = '2PACX-1vRO4mJOvOpCVZXcRKSnBlrjC8Fih94BMFuPj5VxQme0nt39x-DzfQGpWFIDhzaXeTEkfYHOZlw0ojmL';
+    
+    const cacheBuster = `&_t=${Date.now()}`;
+    const PRIMARY_CSV_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?gid=0&single=true&output=csv${cacheBuster}`;
+    const PROXY_CSV_URL = `https://api.allorigins.win/raw?url=${encodeURIComponent(PRIMARY_CSV_URL)}`;
+
+    const FALLBACK_BANK = [
+      { word: "NUMBER", clue: "A mathematical object used to count, measure, and label amounts.", gradeNum: 0 },
+      { word: "COUNT", clue: "To recite numbers in sequence to find the total quantity of items in a set.", gradeNum: 0 },
+      { word: "ZERO", clue: "The numerical digit representing the absence of quantity.", gradeNum: 0 },
+      { word: "EQUAL", clue: "Having the exact same value, quantity, or amount.", gradeNum: 0 },
+      { word: "DIGIT", clue: "Any of the single numerals from 0 to 9 used to form numbers.", gradeNum: 1 },
+      { word: "NUMERAL", clue: "A written symbol or group of symbols representing a number.", gradeNum: 1 },
+      { word: "ONES", clue: "The single-digit place value representing units from 0 to 9.", gradeNum: 1 },
+      { word: "TENS", clue: "The place value representing groups of ten ones.", gradeNum: 1 },
+      { word: "SUM", clue: "The result obtained by adding two or more numbers together.", gradeNum: 2 },
+      { word: "TOTAL", clue: "The complete sum or amount obtained by combining all parts.", gradeNum: 2 },
+      { word: "ADDITION", clue: "The mathematical operation of combining two or more quantities.", gradeNum: 2 },
+      { word: "SUBTRACTION", clue: "The mathematical operation of finding the difference between quantities.", gradeNum: 2 },
+      { word: "FRACTION", clue: "A numerical quantity that is not a whole number.", gradeNum: 4 },
+      { word: "DECIMAL", clue: "A fraction whose denominator is a power of ten.", gradeNum: 5 },
+      { word: "PERCENT", clue: "A ratio comparing a number to one hundred.", gradeNum: 6 },
+      { word: "RATIO", clue: "A quantitative relationship between two amounts.", gradeNum: 6 }
+    ];
+
+    let globalLoadedBank = [];
+    let categories = [];
+    let gridWords = [];
+    let selectedWords = [];
+    let solvedCategories = [];
+    let mistakesLeft = 4;
+    let gameEnded = false;
+
+    function getESTSeed(offsetDays = 0) {
+      const now = new Date();
+      if (offsetDays !== 0) now.setDate(now.getDate() + offsetDays);
+      const estString = now.toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
+      const [m, d, y] = estString.split('/');
+      return parseInt(`${y}${m}${d}`, 10);
+    }
+
+    function createSeededRandom(seed) {
+      let s = seed;
+      return function() {
+        s = (s * 9301 + 49297) % 233280;
+        return s / 233280;
+      };
+    }
+
+    function parseCSVLine(text) {
+      const result = [];
+      let cell = '';
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (c === '"') {
+          if (inQuotes && text[i + 1] === '"') { cell += '"'; i++; }
+          else { inQuotes = !inQuotes; }
+        } else if (c === ',' && !inQuotes) {
+          result.push(cell.trim()); cell = '';
+        } else { cell += c; }
+      }
+      result.push(cell.trim());
+      return result;
+    }
+
+    function parseGrade(rawGrade) {
+      if (!rawGrade) return 0;
+      const str = rawGrade.toString().toLowerCase();
+      if (str.includes('k')) return 0;
+      if (str.includes('high') || str.includes('hs')) return 12;
+      const match = str.match(/\d+/);
+      return match ? parseInt(match[0], 10) : 0;
+    }
+
+    async function fetchWithTimeout(resource, options = {}) {
+      const { timeout = 4000 } = options;
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeout);
+      const response = await fetch(resource, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(id);
+      return response;
+    }
+
+    async function fetchCSVText() {
+      try {
+        const res = await fetchWithTimeout(PRIMARY_CSV_URL, { timeout: 3500 });
+        if (res.ok) {
+          const txt = await res.text();
+          if (txt && !txt.trim().startsWith("<!DOCTYPE") && !txt.trim().startsWith("<html")) return txt;
+        }
+      } catch (e) { console.warn("Direct CSV fetch timed out or failed, trying proxy...", e); }
+
+      try {
+        const proxyRes = await fetchWithTimeout(PROXY_CSV_URL, { timeout: 3500 });
+        if (proxyRes.ok) {
+          const txt = await proxyRes.text();
+          if (txt && !txt.trim().startsWith("<!DOCTYPE") && !txt.trim().startsWith("<html")) return txt;
+        }
+      } catch (e) { console.warn("Proxy CSV fetch timed out or failed.", e); }
+
+      return null;
+    }
+
+    async function loadWordBank() {
+      try {
+        const text = await fetchCSVText();
+        const bank = [];
+
+        if (text) {
+          const lines = text.split(/\r?\n/);
+          for (let i = 1; i < lines.length; i++) {
+            const parts = parseCSVLine(lines[i]);
+            if (parts.length >= 2 && parts[0]) {
+              const word = parts[0].replace(/[^a-zA-Z]/g, '').toUpperCase();
+              const clue = parts[1] ? parts[1].replace(/\$/g, '').trim() : 'No definition available.';
+              const gradeNum = parseGrade(parts[2] || '');
+              if (word) bank.push({ word, clue, gradeNum });
+            }
+          }
+        }
+
+        globalLoadedBank = bank.length >= 16 ? bank : FALLBACK_BANK;
+      } catch (e) {
+        console.warn("Error parsing bank, resorting to fallback:", e);
+        globalLoadedBank = FALLBACK_BANK;
+      }
+
+      buildGameCategories(globalLoadedBank);
+    }
+
+    function getCategoriesForSeed(bank, seed) {
+      const rng = createSeededRandom(seed);
+      const unique = bank.filter((v, i, a) => a.findIndex(t => t.word === v.word) === i);
+      unique.sort((a, b) => a.gradeNum - b.gradeNum);
+
+      const count = Math.floor(unique.length / 4);
+
+      const pickFourForToday = (pool) => {
+        const shuffled = [...pool].map(item => ({ item, sortKey: rng() }))
+                                  .sort((a, b) => a.sortKey - b.sortKey)
+                                  .map(entry => entry.item);
+        return shuffled.slice(0, 4);
+      };
+
+      const g1 = pickFourForToday(unique.slice(0, count));
+      const g2 = pickFourForToday(unique.slice(count, count * 2));
+      const g3 = pickFourForToday(unique.slice(count * 2, count * 3));
+      const g4 = pickFourForToday(unique.slice(count * 3, count * 4));
+
+      return [
+        { name: "Early Primary Foundations (Grades K-1)", class: "cat-easy", items: g1 },
+        { name: "Elementary Operations & Place Value (Grades 2-3)", class: "cat-medium", items: g2 },
+        { name: "Intermediate Math Concepts (Grades 4-5)", class: "cat-hard", items: g3 },
+        { name: "Advanced Ratios & Algebra (Grades 6+)", class: "cat-tricky", items: g4 }
+      ];
+    }
+
+    function buildGameCategories(bank) {
+      const seed = getESTSeed(0);
+      const rng = createSeededRandom(seed);
+
+      categories = getCategoriesForSeed(bank, seed);
+      gridWords = categories.flatMap(c => c.items);
+      
+      const gridShuffled = [...gridWords].map(item => ({ item, sortKey: rng() }))
+                                         .sort((a, b) => a.sortKey - b.sortKey)
+                                         .map(entry => entry.item);
+      gridWords = gridShuffled;
+
+      document.getElementById('status-msg').textContent = '';
+      renderGrid();
+    }
+
+    function renderYesterdayAnswers() {
+      const container = document.getElementById('yesterday-categories-container');
+      container.innerHTML = '';
+
+      const yesterdaySeed = getESTSeed(-1);
+      const yesterdayCats = getCategoriesForSeed(globalLoadedBank, yesterdaySeed);
+
+      yesterdayCats.forEach(cat => {
+        const div = document.createElement('div');
+        div.className = `solved-category ${cat.class}`;
+        const wordList = cat.items.map(i => i.word).join(', ');
+        
+        // Strip grade level text inside parentheses for Yesterday's Answers
+        const cleanName = cat.name.replace(/\s*\([^)]*\)/g, '');
+
+        div.innerHTML = `
+          <div class="cat-title">${cleanName}</div>
+          <div class="cat-words">${wordList}</div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    }
+
+    function renderGrid() {
+      const gridEl = document.getElementById('unsolved-grid');
+      gridEl.innerHTML = '';
+
+      gridWords.forEach(item => {
+        const isSelected = selectedWords.some(w => w.word === item.word);
+        const card = document.createElement('div');
+        card.className = 'card' + (isSelected ? ' selected' : '');
+        
+        const wordText = document.createTextNode(item.word);
+        card.appendChild(wordText);
+
+        const tooltip = document.createElement('div');
+        tooltip.className = 'tooltip';
+        tooltip.textContent = item.clue || 'No definition available.';
+        card.appendChild(tooltip);
+
+        card.addEventListener('click', () => { if (!gameEnded) toggleSelectWord(item); });
+        gridEl.appendChild(card);
+      });
+
+      document.getElementById('submit-btn').disabled = selectedWords.length !== 4 || gameEnded;
+    }
+
+    function toggleSelectWord(item) {
+      const existsIdx = selectedWords.findIndex(w => w.word === item.word);
+      if (existsIdx > -1) {
+        selectedWords.splice(existsIdx, 1);
+      } else if (selectedWords.length < 4) {
+        selectedWords.push(item);
+      }
+      renderGrid();
+    }
+
+    function checkSubmission() {
+      if (selectedWords.length !== 4 || gameEnded) return;
+
+      const matchedCategory = categories.find(cat => 
+        selectedWords.every(sw => cat.items.some(item => item.word === sw.word))
+      );
+
+      if (matchedCategory) {
+        solvedCategories.push(matchedCategory);
+        gridWords = gridWords.filter(gw => !matchedCategory.items.some(item => item.word === gw.word));
+        categories = categories.filter(c => c.name !== matchedCategory.name);
+        selectedWords = [];
+        renderSolved();
+        renderGrid();
+
+        if (gridWords.length === 0) {
+          gameEnded = true;
+          document.getElementById('status-msg').style.color = '#28a745';
+          document.getElementById('status-msg').textContent = '🎉 Excellent! You solved all groups!';
+          recordGameResult(true);
+        }
+      } else {
+        const isOneAway = categories.some(cat => 
+          selectedWords.filter(sw => cat.items.some(item => item.word === sw.word)).length === 3
+        );
+
+        mistakesLeft--;
+        updateMistakesUI();
+
+        const msgEl = document.getElementById('status-msg');
+        msgEl.style.color = '#dc3545';
+        msgEl.textContent = isOneAway ? 'One away!' : 'Incorrect group!';
+
+        if (mistakesLeft === 0) {
+          gameEnded = true;
+          msgEl.textContent = 'Game Over! Out of attempts.';
+          document.getElementById('submit-btn').disabled = true;
+          recordGameResult(false);
+        }
+      }
+    }
+
+    function renderSolved() {
+      const container = document.getElementById('solved-container');
+      container.innerHTML = '';
+
+      solvedCategories.forEach(cat => {
+        const div = document.createElement('div');
+        div.className = `solved-category ${cat.class}`;
+        const wordList = cat.items.map(i => i.word).join(', ');
+        div.innerHTML = `
+          <div class="cat-title">${cat.name}</div>
+          <div class="cat-words">${wordList}</div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function updateMistakesUI() {
+      const dots = document.querySelectorAll('#mistakes-dots .dot');
+      dots.forEach((dot, idx) => {
+        if (idx >= mistakesLeft) dot.classList.add('lost');
+      });
+    }
+
+    function getStats() {
+      const data = localStorage.getItem('conn_math_stats');
+      return data ? JSON.parse(data) : { played: 0, wins: 0, streak: 0, maxStreak: 0, lastPlayedSeed: 0 };
+    }
+
+    function recordGameResult(isWin) {
+      const stats = getStats();
+      const currentSeed = getESTSeed(0);
+      if (stats.lastPlayedSeed === currentSeed) return;
+
+      stats.played++;
+      stats.lastPlayedSeed = currentSeed;
+      if (isWin) {
+        stats.wins++;
+        stats.streak++;
+        if (stats.streak > stats.maxStreak) stats.maxStreak = stats.streak;
+      } else {
+        stats.streak = 0;
+      }
+      localStorage.setItem('conn_math_stats', JSON.stringify(stats));
+    }
+
+    function renderStats() {
+      const stats = getStats();
+      document.getElementById('stat-played').textContent = stats.played;
+      const winRate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
+      document.getElementById('stat-winrate').textContent = `${winRate}%`;
+      document.getElementById('stat-streak').textContent = stats.streak;
+      document.getElementById('stat-maxstreak').textContent = stats.maxStreak;
+    }
+
+    document.getElementById('shuffle-btn').addEventListener('click', () => {
+      if (!gameEnded) { shuffleArray(gridWords); renderGrid(); }
+    });
+
+    document.getElementById('deselect-btn').addEventListener('click', () => {
+      if (!gameEnded) { selectedWords = []; renderGrid(); }
+    });
+
+    document.getElementById('submit-btn').addEventListener('click', checkSubmission);
+    document.getElementById('yesterday-btn').addEventListener('click', () => { renderYesterdayAnswers(); document.getElementById('yesterday-modal').classList.add('open'); });
+    document.getElementById('close-yesterday').addEventListener('click', () => document.getElementById('yesterday-modal').classList.remove('open'));
+    document.getElementById('help-btn').addEventListener('click', () => document.getElementById('help-modal').classList.add('open'));
+    document.getElementById('close-help').addEventListener('click', () => document.getElementById('help-modal').classList.remove('open'));
+    document.getElementById('stats-btn').addEventListener('click', () => { renderStats(); document.getElementById('stats-modal').classList.add('open'); });
+    document.getElementById('close-stats').addEventListener('click', () => document.getElementById('stats-modal').classList.remove('open'));
+
+    window.onload = loadWordBank;
+  </script>
+</body>
+</html>
